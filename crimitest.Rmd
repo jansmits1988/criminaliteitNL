@@ -1,0 +1,167 @@
+---
+title: "Criminaliteit in Nederland"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    social: [ "menu" ]
+    storyboard: true
+    vertical_layout: fill
+---
+#Libraries laden
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(readxl)
+library(tidyverse)
+library(plotly)
+library(ggmap)
+library(reshape2)
+library(DT)
+
+#Datasets laden
+options(scipen = 999)
+x=read_excel("C:\\Users\\jansm\\Desktop\\DatasetDiefstal.xlsx")
+y=read_excel("C:\\Users\\jansm\\Desktop\\DD2016.xlsx")
+z=read_excel("C:\\Users\\jansm\\Desktop\\DD2017.xlsx")
+k=read_excel("C:\\Users\\jansm\\Desktop\\Values.xlsx", sheet=1)
+l=read_excel("C:\\Users\\jansm\\Desktop\\Values.xlsx", sheet=2)
+j=read_excel("C:\\Users\\jansm\\Desktop\\Values.xlsx", sheet=3)
+
+test_data <-melt(j, id='Jaar')
+names(test_data) <- c('Jaar', 'variable', 'value')
+
+#Googlemaps API key defineren
+ggmap::register_google(key = "AIzaSyDNf2WhENfvCxGrZD9Aej7mKhAtyA6EKPY")
+
+#Verschillende views / tabellen op genereren
+x<-x[x$SoortRegio_2 == "Gemeente",]
+z<-z[z$SoortRegio_2 == "Gemeente",]
+x4 <- x %>% select(Gemeentenaam_1,AantalInwoners_5,TotaalVermogensmisdrijven_7)
+x4 <- datatable(x4, options = list(pagelength = 5))
+x8 <- x %>% select(Gemeentenaam_1,AantalInwoners_5,TotaalVermogensmisdrijven_7)
+x8 <- head(x8,5)
+test <- as.numeric(unlist(strsplit(x8$TotaalVermogensmisdrijven_7,' ')))
+x8$experience=test
+x8$TotaalVermogensmisdrijven_7 <- NULL
+names(x8)[1] <- "Gemeente"
+names(x8)[2] <- "AantalInwoners"
+names(x8)[3] <- "TotaalVermogen"
+x8 = rbind(x8, data.frame(Gemeente='Totaal', AantalInwoners = sum(x8$AantalInwoners), TotaalVermogen = sum(x8$TotaalVermogen)))
+x8$Avg <- x8$AantalInwoners / x8$TotaalVermogen
+x2 <- arrange(x, desc(AantalInwoners_5))
+x2 <- head(x,5)
+x2$lat      <- c("52.370216", "51.924419", "52.080190", "52.090736", "51.441643")
+x2$long      <- c("4.895168", "4.477733", "4.310130", "5.121420", "5.469722")
+x2$lat <- as.numeric(as.character(x2$lat))
+x2$long <- as.numeric(as.character(x2$long))
+NL <- get_map(center = c(lon = 4.4631866, lat = 52.2689862),zoom = 8, scale = 2,maptype ='terrain',color = 'color')
+Jaren <- c(2016,2017,2018)
+Amsterdam <- c(65646, 60955, 56926)
+Rotterdam <- c(37315, 34014, 28378)
+DenHaag <- c(25871, 21744, 18735)
+Utrecht <- c(21780, 20789, 18896)
+Eindhoven <- c(13917,11394 ,10529)
+
+```
+
+Dashboard {data-icon="fa-chart-line"}
+=============================
+Row {data-width=150}
+--------------------------------------
+### Totaal Aantal Gemeentes
+```{r}
+TotaalGemeente <- length(unique(x$Gemeentenaam_1))
+valueBox(value = TotaalGemeente,icon = "fa-globe", caption = "Aantal gemeentes",color = "green")
+
+```
+
+### Totaal aantal delicten
+```{r}
+TotaalInwoners=x %>% select(AantalInwoners_5)%>% summarise(sum(AantalInwoners_5))
+valueBox(value = TotaalInwoners,icon = "fa-user-alt",caption = "Aantal Inwoners", color = "orange")
+```
+
+Row
+--------------------------------------
+### Map
+```{r}
+ggmap(NL) + geom_point(data = x2, aes(x = long, y = lat), color = "navy", size = 3)
+
+```
+
+Gemeentes {.Storyboard}
+=============================
+
+-----------------------------------------------------------------------
+
+<!-- ### Frame 1 -->
+
+```{r}
+ggplot(k, aes(x = Gemeentenaam_1, y = Gemiddeld, fill = Type)) + geom_col(position = "dodge")
+
+```
+***
+Gemiddeld aantal Vermogen Diefstallen per gemeente t.o.v. het gemiddelde.
+
+### Frame 2 
+
+
+```{r}
+x4
+```
+***
+Aantal Inwoners per gemeente
+
+Geschiedenis
+=============================
+Row
+-----------------------------------------------------------------------
+
+### Amsterdam
+
+```{r}
+ggplot(j, aes(x=Jaar, y=Amsterdam)) +   geom_line()
+```
+
+### Rotterdam
+
+```{r}
+ggplot(j, aes(x=Jaar, y=Rotterdam)) +   geom_line()
+```
+
+Row
+-----------------------------------------------------------------------
+
+### Den Haag
+
+```{r}
+ggplot(j, aes(x=Jaar, y=DenHaag)) +   geom_line()
+```
+
+### Utrecht
+
+```{r}
+ggplot(j, aes(x=Jaar, y=Utrecht)) +   geom_line()
+```
+Row
+-----------------------------------------------------------------------
+
+### Eindhoven
+
+```{r}
+ggplot(j, aes(x=Jaar, y=Eindhoven)) +   geom_line()
+```
+
+Overzicht Compleet
+=============================
+Row
+-----------------------------------------------------------------------
+### Amsterdam
+
+```{r}
+  ggplot() +
+   geom_line(data = test_data, aes(x = Jaar, y = value, color = variable), size = 1)+
+   xlab("x axis") +
+   ylab("y axis")
+```
+
